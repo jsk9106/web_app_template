@@ -9,6 +9,7 @@ import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class InAppWebViewScreen extends StatefulWidget {
@@ -60,6 +61,11 @@ class _InAppWebViewScreenState extends State<InAppWebViewScreen> {
 
   /// 파일 다운로드
   Future<void> downloadFile(InAppWebViewController controller, DownloadStartRequest downloadStartRequest) async {
+    // 저장공간 권한 요청 추가
+    if(await Permission.storage.status.isDenied) {
+      await Permission.storage.request();
+    }
+
     // blob file download
     if (downloadStartRequest.url.toString().startsWith('blob:')) {
       var jsContent = await rootBundle.loadString("assets/js/base64.js");

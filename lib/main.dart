@@ -14,8 +14,6 @@ void main() async {
     ignoreSsl: true, // option: set to false to disable working with http links (default: false)
   );
 
-  await Permission.storage.request(); // 저장공간 권한 요청 추가
-
   runApp(const MyApp());
 }
 
