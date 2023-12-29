@@ -168,7 +168,7 @@ class _InAppWebViewScreenState extends State<InAppWebViewScreen> {
           onWillPop: () => _goBack(context),
           child: Column(
             children: <Widget>[
-              progress < 1.0 ? LinearProgressIndicator(value: progress, color: const Color.fromRGBO(98, 133, 255, 1)) : const SizedBox.shrink(),
+              progress < 1.0 ? LinearProgressIndicator(value: progress, color: Colors.grey) : const SizedBox.shrink(),
               Expanded(
                 child: Stack(
                   children: [
