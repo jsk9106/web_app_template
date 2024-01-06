@@ -236,11 +236,40 @@ class _InAppWebViewScreenState extends State<InAppWebViewScreen> {
                         webViewController = controller;
                       },
                       onCreateWindow: (controller, createWindowRequest) async {
-                        Uri uri = createWindowRequest.request.url!;
-
-                        if (await canLaunchUrl(uri)) {
-                          await launchUrl(uri);
-                        }
+                        showDialog(
+                          context: context,
+                          builder: (context) {
+                            return InAppWebView(
+                              // Setting the windowId property is important here!
+                              windowId: createWindowRequest.windowId,
+                              initialOptions: InAppWebViewGroupOptions(
+                                android: AndroidInAppWebViewOptions(
+                                  builtInZoomControls: true,
+                                  thirdPartyCookiesEnabled: true,
+                                ),
+                                crossPlatform: InAppWebViewOptions(
+                                  cacheEnabled: true,
+                                  javaScriptEnabled: true,
+                                  userAgent: 'random',
+                                ),
+                                ios: IOSInAppWebViewOptions(
+                                  allowsInlineMediaPlayback: true,
+                                  allowsBackForwardNavigationGestures: true,
+                                ),
+                              ),
+                              onCloseWindow: (controller) async {
+                                if (Navigator.canPop(context)) {
+                                  Navigator.pop(context);
+                                }
+                              },
+                            );
+                          },
+                        );
+                        // Uri uri = createWindowRequest.request.url!;
+                        //
+                        // if (await canLaunchUrl(uri)) {
+                        //   await launchUrl(uri);
+                        // }
 
                         return true;
                       },
