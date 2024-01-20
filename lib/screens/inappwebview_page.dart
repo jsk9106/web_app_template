@@ -11,6 +11,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 
 class InAppWebViewScreen extends StatefulWidget {
   const InAppWebViewScreen({Key? key}) : super(key: key);
@@ -206,14 +207,26 @@ class _InAppWebViewScreenState extends State<InAppWebViewScreen> {
                       onLoadStart: (InAppWebViewController controller, uri) async {
                         final String url = uri.toString();
 
-                        if (url.startsWith('tel:') || url.startsWith('sms:')) {
-                          /// tel, sms
+                        /// intent
+                        if (url.contains(RegExp('^intent:'))) {
                           controller.goBack();
-                          if (await canLaunchUrl(uri!)) launchUrl(uri);
-                        } else {
-                          setState(() {
-                            myUrl = uri!;
+
+                          getAppUrl(url).then((value) async {
+                            /// 플레이스토어 이동
+                            final marketUrl = await getMarketUrl(url);
+                            await launchUrlString(marketUrl);
                           });
+                        } else {
+                          /// intent 아닌 경우
+                          if (url.startsWith('tel:') || url.startsWith('sms:')) {
+                            /// tel, sms
+                            controller.goBack();
+                            if (await canLaunchUrl(uri!)) launchUrl(uri);
+                          } else {
+                            setState(() {
+                              myUrl = uri!;
+                            });
+                          }
                         }
                       },
                       onLoadStop: (InAppWebViewController controller, uri) {
