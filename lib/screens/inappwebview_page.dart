@@ -214,9 +214,14 @@ class _InAppWebViewScreenState extends State<InAppWebViewScreen> {
                           controller.goBack();
 
                           getAppUrl(url).then((value) async {
-                            /// 플레이스토어 이동
-                            final marketUrl = await getMarketUrl(url);
-                            await launchUrlString(marketUrl);
+                            if (await canLaunchUrlString(value)) {
+                              /// 앱 이동
+                              await launchUrlString(value);
+                            } else {
+                              /// 플레이스토어 이동
+                              final marketUrl = await getMarketUrl(url);
+                              await launchUrlString(marketUrl);
+                            }
                           });
                         } else {
                           /// intent 아닌 경우
