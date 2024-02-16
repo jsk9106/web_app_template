@@ -39,6 +39,9 @@ dependencies:
   cupertino_icons: ^1.0.2
   fluttertoast: ^8.2.2
   url_launcher: ^6.1.12
+
+  flutter_webview_pro: ^3.0.1+4
+
   flutter_inappwebview: ^5.8.0
   flutter_downloader: ^1.11.4 # 파일 다운로드
   path_provider: ^2.1.1 # 경로 관리

@@ -28,6 +28,8 @@ class _InAppWebViewScreenState extends State<InAppWebViewScreen> {
   late final PullToRefreshController pullToRefreshController;
   double progress = 0;
 
+  final String userAgent = 'Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.82 Mobile Safari/537.36';
+
   /// file download 관련
   final ReceivePort _port = ReceivePort();
 
@@ -187,7 +189,7 @@ class _InAppWebViewScreenState extends State<InAppWebViewScreen> {
                           allowFileAccessFromFileURLs: true,
                           allowUniversalAccessFromFileURLs: true,
                           verticalScrollBarEnabled: true,
-                          userAgent: 'random',
+                          userAgent: userAgent,
                         ),
                         android: AndroidInAppWebViewOptions(
                           useHybridComposition: true,
@@ -263,7 +265,7 @@ class _InAppWebViewScreenState extends State<InAppWebViewScreen> {
                                 crossPlatform: InAppWebViewOptions(
                                   cacheEnabled: true,
                                   javaScriptEnabled: true,
-                                  userAgent: 'random',
+                                  userAgent: userAgent,
                                 ),
                                 ios: IOSInAppWebViewOptions(
                                   allowsInlineMediaPlayback: true,
