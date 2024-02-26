@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_webview_pro/webview_flutter.dart';
@@ -40,7 +41,12 @@ class _HomePageState extends State<HomePage> {
     currentBackPressTime = DateTime.now();
 
     Fluttertoast.showToast(
-        msg: "뒤로가기를 한 번 더 입력하시면 종료됩니다.", toastLength: Toast.LENGTH_SHORT, gravity: ToastGravity.BOTTOM, timeInSecForIosWeb: 2, fontSize: 12.0);
+      msg: "한 번 더 눌러서 종료",
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+      timeInSecForIosWeb: 2,
+      fontSize: 12.0,
+    );
     return Future.value(false);
   }
 
@@ -86,21 +92,21 @@ class _HomePageState extends State<HomePage> {
               },
               geolocationEnabled: true,
               navigationDelegate: (NavigationRequest request) async {
-                if (request.url.contains(RegExp('^intent:')) || request.url.contains('tel:') || request.url.contains('sms:')) {
+                if (kDebugMode) print(request.url);
+                if (request.url.contains(RegExp('^intent:')) || request.url.startsWith('market://') || request.url.startsWith('ncppay://')) {
                   getAppUrl(request.url).then((value) async {
-                    if (request.url.contains('tel:') || request.url.contains('sms:')) {
-                      // 전화, 문자
-                      launchUrl(Uri.parse(value));
+                    if (await canLaunchUrlString(value)) {
+                      await launchUrlString(value);
                     } else {
-                      if (await canLaunchUrlString(value)) {
-                        await launchUrlString(value);
-                      } else {
-                        // 플레이스토어 이동
-                        final marketUrl = await getMarketUrl(request.url);
-                        await launchUrlString(marketUrl);
-                      }
+                      // 플레이스토어 이동
+                      final marketUrl = await getMarketUrl(request.url);
+                      await launchUrlString(marketUrl);
                     }
                   });
+                  return NavigationDecision.prevent;
+                } else if (request.url.contains('tel:') || request.url.contains('sms:')) {
+                  // 전화, 문자
+                  launchUrl(Uri.parse(request.url));
                   return NavigationDecision.prevent;
                 }
                 return NavigationDecision.navigate;
