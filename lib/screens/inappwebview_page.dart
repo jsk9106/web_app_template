@@ -149,7 +149,7 @@ class _InAppWebViewScreenState extends State<InAppWebViewScreen> {
   Future<bool> backToast() {
     currentBackPressTime = DateTime.now();
 
-    showToast("뒤로가기를 한 번 더 입력하시면 종료됩니다.");
+    showToast("한 번 더 눌러서 종료");
     return Future.value(false);
   }
 
