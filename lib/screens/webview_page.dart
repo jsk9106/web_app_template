@@ -186,22 +186,18 @@ class _WebViewPageState extends State<WebViewPage> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Scaffold(
-          body: _isInProgress
-              ? const SizedBox.shrink()
-              : MediaQuery(
-                  data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0), //사용자 스케일팩터 무시
-                  child: SafeArea(
-                    child: WillPopScope(
-                      onWillPop: () => _goBack(context),
-                      child: WebViewWidget(controller: controller),
-                    ),
-                  ),
+    return Scaffold(
+      body: _isInProgress
+          ? const SizedBox.shrink()
+          : MediaQuery(
+              data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0), //사용자 스케일팩터 무시
+              child: SafeArea(
+                child: WillPopScope(
+                  onWillPop: () => _goBack(context),
+                  child: WebViewWidget(controller: controller),
                 ),
-        ),
-      ],
+              ),
+            ),
     );
   }
 }
