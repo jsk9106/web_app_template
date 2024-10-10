@@ -42,7 +42,7 @@
         <!--        파일 업로드-->
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="com.example.web_app_template.flutter_inappwebview.fileprovider"
+            android:authorities="${applicationId}.flutter_inappwebview.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data

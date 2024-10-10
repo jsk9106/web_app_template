@@ -5,9 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_webview_pro/webview_flutter.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:url_launcher/url_launcher_string.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -79,7 +79,7 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: MediaQuery(
-        data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0), //사용자 스케일팩터 무시
+        data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling), //사용자 스케일팩터 무시
         child: SafeArea(
           child: WillPopScope(
             onWillPop: () => _goBack(context),
@@ -93,7 +93,9 @@ class _HomePageState extends State<HomePage> {
               geolocationEnabled: true,
               navigationDelegate: (NavigationRequest request) async {
                 if (kDebugMode) print(request.url);
-                if (request.url.contains(RegExp('^intent:')) || request.url.startsWith('market://') || request.url.startsWith('ncppay://')) {
+                if (request.url.contains(RegExp('^intent:')) ||
+                    request.url.startsWith('market://') ||
+                    request.url.startsWith('ncppay://')) {
                   getAppUrl(request.url).then((value) async {
                     if (await canLaunchUrlString(value)) {
                       await launchUrlString(value);
