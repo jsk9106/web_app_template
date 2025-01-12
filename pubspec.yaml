@@ -40,12 +40,10 @@ dependencies:
   fluttertoast: ^8.2.2
   url_launcher: ^6.1.12
 
-  flutter_inappwebview: ^5.8.0
+  flutter_inappwebview: ^6.1.5
   flutter_downloader: ^1.11.4 # 파일 다운로드
   path_provider: ^2.1.1 # 경로 관리
   permission_handler: ^11.0.1 # 권한 관리
-
-#  flutter_webview_pro: ^3.0.1+4
 
   firebase_core: ^2.23.0
   firebase_messaging: ^14.7.9
@@ -53,7 +51,6 @@ dependencies:
   flutter_dynamic_icon: ^2.1.0
 
   webview_flutter: ^4.10.0
-#  file_picker: ^6.1.1
   image_picker: ^1.0.7
   device_info_plus: ^9.1.2 # 디바이스 정보
 

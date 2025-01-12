@@ -1,49 +1,149 @@
 import 'dart:io';
-import 'dart:isolate';
-import 'dart:ui';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:fluttertoast/fluttertoast.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
 class InAppWebViewScreen extends StatefulWidget {
-  const InAppWebViewScreen({Key? key}) : super(key: key);
+  const InAppWebViewScreen({super.key});
 
   @override
   State<InAppWebViewScreen> createState() => _InAppWebViewScreenState();
 }
 
 class _InAppWebViewScreenState extends State<InAppWebViewScreen> {
-  final GlobalKey webViewKey = GlobalKey();
-
-  Uri myUrl = Uri.parse("www.heymanz.com");
+  String initialUrl = 'https://beautibucks.com/';
   late final InAppWebViewController webViewController;
-  late final PullToRefreshController pullToRefreshController;
-  double progress = 0;
+  DateTime? currentBackPressTime;
 
-  final String userAgent = 'Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.82 Mobile Safari/537.36';
-
-  /// file download 관련
-  final ReceivePort _port = ReceivePort();
-
-  @pragma('vm:entry-point')
-  static void downloadCallback(String id, int status, int downloadProgress) {
-    final SendPort send = IsolateNameServer.lookupPortByName('downloader_send_port')!;
-    send.send([id, status, downloadProgress]);
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) => _goBack(),
+      child: ColoredBox(
+        color: Colors.white,
+        child: SafeArea(
+          bottom: false,
+          child: Scaffold(
+            backgroundColor: Colors.white,
+            body: InAppWebView(
+              initialUrlRequest: URLRequest(url: WebUri(initialUrl)),
+              initialSettings: InAppWebViewSettings(
+                javaScriptCanOpenWindowsAutomatically: true,
+                javaScriptEnabled: true,
+                useHybridComposition: true,
+                allowContentAccess: true,
+                builtInZoomControls: true,
+                thirdPartyCookiesEnabled: true,
+                allowFileAccess: true,
+                geolocationEnabled: true,
+                useOnRenderProcessGone: true,
+                useShouldOverrideUrlLoading: true,
+                mediaPlaybackRequiresUserGesture: true,
+                allowFileAccessFromFileURLs: true,
+                useShouldInterceptRequest: true,
+                allowUniversalAccessFromFileURLs: true,
+                allowsInlineMediaPlayback: true,
+                transparentBackground: true,
+                supportMultipleWindows: true,
+              ),
+              shouldOverrideUrlLoading: _shouldOverrideUrlLoading,
+              onCreateWindow: _onCreateWindow,
+              onWebViewCreated: (controller) => webViewController = controller,
+              onPermissionRequest: (controller, request) async {
+                return PermissionResponse(resources: request.resources, action: PermissionResponseAction.GRANT);
+              },
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
-  /// file download 관련
+  /// URL 로딩 전 처리
+  Future<NavigationActionPolicy?> _shouldOverrideUrlLoading(controller, navigationAction) async {
+    final String url = navigationAction.request.url.toString();
 
-  /// intent 관련
-  static const platform = MethodChannel('intent');
+    // 특수 URL 처리 (예: tel: 또는 sms:)
+    if (url.startsWith('tel:') || url.startsWith('sms:')) {
+      if (await canLaunchUrlString(url)) {
+        await launchUrlString(url);
+      }
+      return NavigationActionPolicy.CANCEL;
+    }
 
+    final bool isIntentUrl = (!url.startsWith('http') && !url.startsWith('https'));
+
+    // android intent 처리
+    if (Platform.isAndroid) {
+      if (isIntentUrl) {
+        await controller.stopLoading();
+
+        final String appUrl = await getAppUrl(url);
+        if (await canLaunchUrlString(appUrl)) {
+          await launchUrlString(appUrl); // 앱으로 이동
+        } else {
+          final String marketUrl = await getMarketUrl(url);
+          if (await canLaunchUrlString(marketUrl)) {
+            await launchUrlString(marketUrl); // 앱이 없으면 Play Store로 이동
+          }
+        }
+
+        return NavigationActionPolicy.CANCEL;
+      }
+    }
+
+    // ios intent 처리
+    if (Platform.isIOS) {
+      if (isIntentUrl) {
+        if (await canLaunchUrlString(url)) {
+          await launchUrlString(url); // 앱으로 이동
+        }
+
+        return NavigationActionPolicy.CANCEL;
+      }
+    }
+
+    // 기본적으로는 WebView에서 로드
+    return NavigationActionPolicy.ALLOW;
+  }
+
+  /// 새 창 생성
+  Future<bool?> _onCreateWindow(controller, CreateWindowAction createWindowRequest) async {
+    showDialog(
+      context: context,
+      useSafeArea: false,
+      builder: (context) {
+        return SafeArea(
+          bottom: false,
+          child: InAppWebView(
+            windowId: createWindowRequest.windowId,
+            initialSettings: InAppWebViewSettings(
+              builtInZoomControls: true,
+              thirdPartyCookiesEnabled: true,
+              cacheEnabled: true,
+              javaScriptEnabled: true,
+              allowsInlineMediaPlayback: true,
+              allowsBackForwardNavigationGestures: true,
+            ),
+            onCloseWindow: (controller) async {
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              }
+            },
+            shouldOverrideUrlLoading: _shouldOverrideUrlLoading,
+          ),
+        );
+      },
+    );
+    return true;
+  }
+
+  final MethodChannel platform = const MethodChannel('intent');
+
+  /// 앱 URL 가져오기
   Future<String> getAppUrl(String url) async {
     if (Platform.isAndroid) {
       return await platform.invokeMethod('getAppUrl', <String, Object>{'url': url});
@@ -52,6 +152,7 @@ class _InAppWebViewScreenState extends State<InAppWebViewScreen> {
     }
   }
 
+  /// 마켓 URL 가져오기
   Future<String> getMarketUrl(String url) async {
     if (Platform.isAndroid) {
       return await platform.invokeMethod('getMarketUrl', <String, Object>{'url': url});
@@ -60,248 +161,21 @@ class _InAppWebViewScreenState extends State<InAppWebViewScreen> {
     }
   }
 
-  /// intent 관련
+  /// 뒤로가기 처리
+  void _goBack([bool? didPop]) async {
+    if (didPop ?? false) return;
 
-  /// 파일 다운로드
-  Future<void> downloadFile(InAppWebViewController controller, DownloadStartRequest downloadStartRequest) async {
-    // 저장공간 권한 요청 추가
-    if(await Permission.storage.status.isDenied) {
-      await Permission.storage.request();
-    }
-
-    // blob file download
-    if (downloadStartRequest.url.toString().startsWith('blob:')) {
-      var jsContent = await rootBundle.loadString("assets/js/base64.js");
-      await controller.evaluateJavascript(source: jsContent.replaceAll("blobUrlPlaceholder", downloadStartRequest.url.toString()));
-    } else {
-      // file download
-      try {
-        final Directory? directory = await getDownloadsDirectory();
-        final String savedDirPath = directory!.path;
-
-        await FlutterDownloader.enqueue(
-          url: downloadStartRequest.url.toString(),
-          savedDir: savedDirPath,
-          saveInPublicStorage: true,
-          showNotification: false,
-          openFileFromNotification: false,
-        );
-
-        showToast('파일 다운로드가 완료되었습니다.');
-      } catch (e) {
-        if (kDebugMode) print(e);
-        showToast('파일 다운로드에 실패했습니다.');
-      }
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-
-    pullToRefreshController = (kIsWeb
-        ? null
-        : PullToRefreshController(
-            options: PullToRefreshOptions(
-              color: Colors.blue,
-            ),
-            onRefresh: () async {
-              if (defaultTargetPlatform == TargetPlatform.android) {
-                webViewController.reload();
-              } else if (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS) {
-                webViewController.loadUrl(urlRequest: URLRequest(url: await webViewController.getUrl()));
-              }
-            },
-          ))!;
-
-    /// file download 관련
-    IsolateNameServer.registerPortWithName(_port.sendPort, 'downloader_send_port');
-
-    FlutterDownloader.registerCallback(downloadCallback);
-
-    /// file download 관련
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-
-    IsolateNameServer.removePortNameMapping('downloader_send_port');
-  }
-
-  static DateTime? currentBackPressTime;
-
-  Future<bool> _goBack(BuildContext context) async {
     if (await webViewController.canGoBack()) {
       webViewController.goBack();
-      return Future.value(false);
-    } else {
-      if (currentBackPressTime == null) {
-        return backToast();
-      } else if (DateTime.now().difference(currentBackPressTime!) > const Duration(seconds: 2)) {
-        return backToast();
-      }
-
-      return Future.value(true);
+      return;
     }
-  }
 
-  Future<bool> backToast() {
-    currentBackPressTime = DateTime.now();
-
-    showToast("한 번 더 눌러서 종료");
-    return Future.value(false);
-  }
-
-  void showToast(String msg) {
-    Fluttertoast.showToast(
-      msg: msg,
-      toastLength: Toast.LENGTH_SHORT,
-      gravity: ToastGravity.BOTTOM,
-      timeInSecForIosWeb: 2,
-      fontSize: 12.0,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: WillPopScope(
-          onWillPop: () => _goBack(context),
-          child: Column(
-            children: <Widget>[
-              progress < 1.0 ? LinearProgressIndicator(value: progress, color: Colors.grey) : const SizedBox.shrink(),
-              Expanded(
-                child: Stack(
-                  children: [
-                    InAppWebView(
-                      key: webViewKey,
-                      initialUrlRequest: URLRequest(url: myUrl),
-                      initialOptions: InAppWebViewGroupOptions(
-                        crossPlatform: InAppWebViewOptions(
-                          javaScriptCanOpenWindowsAutomatically: true,
-                          javaScriptEnabled: true,
-                          useOnDownloadStart: true,
-                          useOnLoadResource: true,
-                          useShouldOverrideUrlLoading: true,
-                          mediaPlaybackRequiresUserGesture: true,
-                          allowFileAccessFromFileURLs: true,
-                          allowUniversalAccessFromFileURLs: true,
-                          verticalScrollBarEnabled: true,
-                          userAgent: userAgent,
-                        ),
-                        android: AndroidInAppWebViewOptions(
-                          useHybridComposition: true,
-                          allowContentAccess: true,
-                          builtInZoomControls: true,
-                          thirdPartyCookiesEnabled: true,
-                          allowFileAccess: true,
-                          geolocationEnabled: true,
-                          supportMultipleWindows: true,
-                        ),
-                        ios: IOSInAppWebViewOptions(
-                          allowsInlineMediaPlayback: true,
-                          allowsBackForwardNavigationGestures: true,
-                        ),
-                      ),
-                      pullToRefreshController: pullToRefreshController,
-                      onLoadStart: (InAppWebViewController controller, uri) async {
-                        final String url = uri.toString();
-
-                        /// intent
-                        if (url.contains(RegExp('^intent:'))) {
-                          controller.goBack();
-
-                          getAppUrl(url).then((value) async {
-                            if (await canLaunchUrlString(value)) {
-                              /// 앱 이동
-                              await launchUrlString(value);
-                            } else {
-                              /// 플레이스토어 이동
-                              final marketUrl = await getMarketUrl(url);
-                              await launchUrlString(marketUrl);
-                            }
-                          });
-                        } else {
-                          /// intent 아닌 경우
-                          if (url.startsWith('tel:') || url.startsWith('sms:')) {
-                            /// tel, sms
-                            controller.goBack();
-                            if (await canLaunchUrl(uri!)) launchUrl(uri);
-                          } else {
-                            setState(() {
-                              myUrl = uri!;
-                            });
-                          }
-                        }
-                      },
-                      onLoadStop: (InAppWebViewController controller, uri) {
-                        setState(() {
-                          myUrl = uri!;
-                        });
-                      },
-                      onProgressChanged: (controller, progress) {
-                        if (progress == 100) {
-                          pullToRefreshController.endRefreshing();
-                        }
-                        setState(() {
-                          this.progress = progress / 100;
-                        });
-                      },
-                      androidOnPermissionRequest: (controller, origin, resources) async {
-                        return PermissionRequestResponse(resources: resources, action: PermissionRequestResponseAction.GRANT);
-                      },
-                      onWebViewCreated: (InAppWebViewController controller) {
-                        webViewController = controller;
-                      },
-                      onCreateWindow: (controller, createWindowRequest) async {
-                        showDialog(
-                          context: context,
-                          builder: (context) {
-                            return InAppWebView(
-                              // Setting the windowId property is important here!
-                              windowId: createWindowRequest.windowId,
-                              initialOptions: InAppWebViewGroupOptions(
-                                android: AndroidInAppWebViewOptions(
-                                  builtInZoomControls: true,
-                                  thirdPartyCookiesEnabled: true,
-                                ),
-                                crossPlatform: InAppWebViewOptions(
-                                  cacheEnabled: true,
-                                  javaScriptEnabled: true,
-                                  userAgent: userAgent,
-                                ),
-                                ios: IOSInAppWebViewOptions(
-                                  allowsInlineMediaPlayback: true,
-                                  allowsBackForwardNavigationGestures: true,
-                                ),
-                              ),
-                              onCloseWindow: (controller) async {
-                                if (Navigator.canPop(context)) {
-                                  Navigator.pop(context);
-                                }
-                              },
-                            );
-                          },
-                        );
-                        // Uri uri = createWindowRequest.request.url!;
-                        //
-                        // if (await canLaunchUrl(uri)) {
-                        //   await launchUrl(uri);
-                        // }
-
-                        return true;
-                      },
-                      onDownloadStartRequest: (controller, downloadStartRequest) => downloadFile(controller, downloadStartRequest),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    if (mounted) {
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      } else {
+        SystemNavigator.pop();
+      }
+    }
   }
 }

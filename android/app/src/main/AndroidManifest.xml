@@ -53,7 +53,7 @@
         <!--        파일 다운로드-->
         <provider
             android:name="vn.hunghd.flutterdownloader.DownloadedFileProvider"
-            android:authorities="com.example.web_app_template.flutter_downloader.provider"
+            android:authorities="${applicationId}.flutter_downloader.provider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data
